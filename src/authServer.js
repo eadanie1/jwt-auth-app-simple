@@ -82,9 +82,9 @@ app.delete(
 
     if (foundToken) {
       refreshTokens = refreshTokens.filter(token => token !== foundToken);
-      res.sendStatus(204);
+      return res.sendStatus(204);
     } else {
-      res.status(404).json({message: 'Token not found'});
+      return res.status(404).json({message: 'Token not found'});
     }
 }));
 
