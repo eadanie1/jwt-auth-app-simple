@@ -25,11 +25,11 @@ async function hashPasswords() {
 
 hashPasswords().then();
 
-function generateAccessToken(user) {
+export function generateAccessToken(user) {
   return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1m' });
 }
 
-function generateRefreshToken(user) {
+export function generateRefreshToken(user) {
   return jwt.sign(user, process.env.REFRESH_TOKEN_SECRET);
 }
 

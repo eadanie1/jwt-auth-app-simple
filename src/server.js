@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { tryCatch } from './global-logic/tryCatch.js';
+import { errorHandler } from './global-logic/errorHandler.js';
 const app = express();
 dotenv.config();
 app.use(express.json());
@@ -53,6 +54,8 @@ app.get(
     return res.json(posts.filter(post => post.username === req.user.username))
   })
 );
+
+app.use(errorHandler);
 
 app.listen(3000, () => {
   console.log('Listening on port 3000');
