@@ -6,6 +6,8 @@ const app = express();
 dotenv.config();
 app.use(express.json());
 
+let refreshTokens = [];
+
 const users = [
   { username: 'user1', password: process.env.USER_PASSWORD_x1, id: 'x1' },
   { username: 'user2', password: process.env.USER_PASSWORD_x2, id: 'x2' },
@@ -20,26 +22,26 @@ async function hashPasswords() {
   }
 }
 
-// Function to simulate user login
-async function loginUser(username, password) {
-  const user = users.find(user => user.username === username);
-  if (!user) {
-    console.log('User not found');
-    return;
-  }
-  const isPasswordCorrect = await bcrypt.compare(password, user.password);
-  if (isPasswordCorrect) {
-    console.log('Login successful');
-  } else {
-    console.log('Incorrect password');
-  }
-}
-
 hashPasswords().then(() => {
   // Simulate login attempts
-  loginUser('user1', process.env.TEST_PASSWORD_x1); // Should succeed
-  loginUser('user2', process.env.INCORRECT_TEST_PASSWORD); // Should fail
+  // loginUser('user1', process.env.TEST_PASSWORD_x1); // Should succeed
+  // loginUser('user2', process.env.INCORRECT_TEST_PASSWORD); // Should fail
 });
+
+// // Function to simulate user login
+// async function loginUser(username, password) {
+//   const user = users.find(user => user.username === username);
+//   if (!user) {
+//     console.log('User not found');
+//     return;
+//   }
+//   const isPasswordCorrect = await bcrypt.compare(password, user.password);
+//   if (isPasswordCorrect) {
+//     console.log('Login successful');
+//   } else {
+//     console.log('Incorrect password');
+//   }
+// }
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
@@ -52,15 +54,12 @@ app.post('/login', async (req, res) => {
   }
 
   try {
-    // Compare the provided password with the hashed password
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
     if (isPasswordCorrect) {
-      // Passwords match, generate token
-      const token = jwt.sign({ username: user.username, id: user.id }, process.env.JWT_SECRET);
-      res.status(200).json({ token });
+      const accessToken = jwt.sign({ username: user.username, id: user.id }, process.env.ACCESS_TOKEN_SECRET);
+      res.status(200).json({ accessToken });
     } else {
-      // Passwords don't match
       res.status(401).json({ message: 'Invalid username or password' });
     }
   } catch (error) {
