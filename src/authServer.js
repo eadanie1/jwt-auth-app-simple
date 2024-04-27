@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
+import { tryCatch } from './global-logic/tryCatch.js';
 const app = express();
 dotenv.config();
 app.use(express.json());
@@ -22,50 +23,70 @@ async function hashPasswords() {
   }
 }
 
-hashPasswords().then(() => {
-  // Simulate login attempts
-  // loginUser('user1', process.env.TEST_PASSWORD_x1); // Should succeed
-  // loginUser('user2', process.env.INCORRECT_TEST_PASSWORD); // Should fail
-});
+hashPasswords().then();
 
-// // Function to simulate user login
-// async function loginUser(username, password) {
-//   const user = users.find(user => user.username === username);
-//   if (!user) {
-//     console.log('User not found');
-//     return;
-//   }
-//   const isPasswordCorrect = await bcrypt.compare(password, user.password);
-//   if (isPasswordCorrect) {
-//     console.log('Login successful');
-//   } else {
-//     console.log('Incorrect password');
-//   }
-// }
+function generateAccessToken(user) {
+  return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1m' });
+}
 
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  
-  // Find user by username
-  const user = users.find(user => user.username === username);
-  
-  if (!user) {
-    return res.status(401).json({ message: 'Invalid username or password' });
-  }
+function generateRefreshToken(user) {
+  return jwt.sign(user, process.env.REFRESH_TOKEN_SECRET);
+}
 
-  try {
-    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+app.post(
+  '/login', 
+  tryCatch(async (req, res) => {
+    const { username, password } = req.body;
+    const matchedUser = users.find(user => user.username === username);
+    
+    if (!matchedUser) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    const user = { username: matchedUser.username, id: matchedUser.id };
+    const isPasswordCorrect = await bcrypt.compare(password, matchedUser.password);
 
     if (isPasswordCorrect) {
-      const accessToken = jwt.sign({ username: user.username, id: user.id }, process.env.ACCESS_TOKEN_SECRET);
-      res.status(200).json({ accessToken });
+      const accessToken = generateAccessToken(user);
+      const refreshToken = generateRefreshToken(user);
+      refreshTokens.push(refreshToken);
+
+      return res.status(200).json({ accessToken, refreshToken });
     } else {
-      res.status(401).json({ message: 'Invalid username or password' });
+      return res.status(401).json({ message: 'Invalid username or password' });
     }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+}));
+
+app.post(
+  '/token', 
+  tryCatch((req, res) => {
+    const refreshToken = req.body.token;
+    if (refreshToken === null) return res.sendStatus(401);
+    if (!refreshTokens.includes(refreshToken)) return res.status(403).json({message: 'Token not found'});
+
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+      if (err) {
+        return res.sendStatus(403);
+      } else {
+        const accessToken = generateAccessToken({ name: user.name });
+        return res.json({ accessToken });
+      }
+    })
+  })
+);
+
+app.delete(
+  '/logout', 
+  tryCatch((req, res) => {
+    const foundToken = refreshTokens.find(token => token === req.body.token);
+
+    if (foundToken) {
+      refreshTokens = refreshTokens.filter(token => token !== foundToken);
+      res.sendStatus(204);
+    } else {
+      res.status(404).json({message: 'Token not found'});
+    }
+}));
 
 app.listen(4000, () => {
   console.log('Listening on port 4000');
