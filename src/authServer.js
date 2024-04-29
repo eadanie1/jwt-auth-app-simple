@@ -68,7 +68,7 @@ app.post(
       if (err) {
         return res.sendStatus(403);
       } else {
-        const accessToken = generateAccessToken({ name: user.name });
+        const accessToken = generateAccessToken({ username: user.username });
         return res.json({ accessToken });
       }
     })
